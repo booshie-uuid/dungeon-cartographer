@@ -28,7 +28,8 @@ class DungeonMapGenerator
         roomCount = 140,
         extraDoors = 8,
         mergeChance = 0.42,
-        fillDensity = 0.55
+        fillDensity = 0.55,
+        compoundRooms = 5
     } = {})
     {
         this.mapWidth = mapWidth;
@@ -39,6 +40,7 @@ class DungeonMapGenerator
         this.extraDoors = extraDoors;
         this.mergeChance = mergeChance;
         this.fillDensity = fillDensity;
+        this.compoundRooms = compoundRooms;
     }
 
     generate()
@@ -55,6 +57,7 @@ class DungeonMapGenerator
 
         this.placeRooms();
         this.fixDiagonalVoids();
+        this.placeCompoundRooms();
 
         const width = metaGrid.totalW;
         const height = metaGrid.totalH;
@@ -460,6 +463,125 @@ class DungeonMapGenerator
         }
 
         return count;
+    }
+
+
+    /* COMPOUND ROOMS ***************************************************************/
+
+    getCompoundShapes()
+    {
+        return [
+            // L-shapes
+            { cells: [[0,0],[0,1],[1,0]], edges: [[[0,0],[0,1]], [[0,0],[1,0]]] },
+            { cells: [[0,0],[0,1],[1,1]], edges: [[[0,0],[0,1]], [[0,1],[1,1]]] },
+            { cells: [[0,0],[1,0],[1,1]], edges: [[[0,0],[1,0]], [[1,0],[1,1]]] },
+            { cells: [[0,1],[1,0],[1,1]], edges: [[[0,1],[1,1]], [[1,0],[1,1]]] },
+
+            // T-shapes
+            { cells: [[0,0],[0,1],[0,2],[1,1]], edges: [[[0,0],[0,1]], [[0,1],[0,2]], [[0,1],[1,1]]] },
+            { cells: [[0,0],[1,0],[2,0],[1,1]], edges: [[[0,0],[1,0]], [[1,0],[2,0]], [[1,0],[1,1]]] },
+            { cells: [[0,1],[1,0],[1,1],[1,2]], edges: [[[0,1],[1,1]], [[1,0],[1,1]], [[1,1],[1,2]]] },
+            { cells: [[0,1],[1,0],[1,1],[2,1]], edges: [[[0,1],[1,1]], [[1,0],[1,1]], [[1,1],[2,1]]] },
+
+            // Z-shapes
+            { cells: [[0,0],[0,1],[1,1],[1,2]], edges: [[[0,0],[0,1]], [[0,1],[1,1]], [[1,1],[1,2]]] },
+            { cells: [[0,0],[1,0],[1,1],[2,1]], edges: [[[0,0],[1,0]], [[1,0],[1,1]], [[1,1],[2,1]]] },
+            { cells: [[0,1],[0,2],[1,0],[1,1]], edges: [[[0,1],[0,2]], [[0,1],[1,1]], [[1,0],[1,1]]] },
+            { cells: [[0,1],[1,0],[1,1],[2,0]], edges: [[[0,1],[1,1]], [[1,0],[1,1]], [[1,0],[2,0]]] }
+        ];
+    }
+
+    buildMergedCellSet()
+    {
+        const set = {};
+
+        for(const m of this.state.mergedPairs)
+        {
+            set[this.cellKey(m.a.row, m.a.col)] = true;
+            set[this.cellKey(m.b.row, m.b.col)] = true;
+        }
+
+        return set;
+    }
+
+    findCompoundCandidates(shapes, mergedCells)
+    {
+        const metaGrid = this.state.metaGrid;
+        const candidates = [];
+
+        for(const shape of shapes)
+        {
+            for(let r = 0; r < metaGrid.numRows; r++)
+            {
+                for(let c = 0; c < metaGrid.numCols; c++)
+                {
+                    const cells = shape.cells.map(([dr, dc]) => ({ row: r + dr, col: c + dc }));
+
+                    const valid = cells.every(cell =>
+                        cell.row >= 0 && cell.row < metaGrid.numRows &&
+                        cell.col >= 0 && cell.col < metaGrid.numCols &&
+                        this.isOccupied(cell.row, cell.col) &&
+                        !mergedCells[this.cellKey(cell.row, cell.col)]
+                    );
+
+                    if(!valid) { continue; }
+
+                    const edges = shape.edges.map(([a, b]) =>
+                        this.makeEdge(r + a[0], c + a[1], r + b[0], c + b[1])
+                    );
+
+                    candidates.push({ cells, edges });
+                }
+            }
+        }
+
+        return candidates;
+    }
+
+    placeCompoundRooms()
+    {
+        if(this.compoundRooms <= 0) { return; }
+
+        const shapes = this.getCompoundShapes();
+        const mergedCells = this.buildMergedCellSet();
+        const candidates = this.findCompoundCandidates(shapes, mergedCells);
+
+        this.shuffle(candidates);
+
+        const claimed = {};
+        let placed = 0;
+
+        for(const candidate of candidates)
+        {
+            if(placed >= this.compoundRooms) { break; }
+
+            const conflict = candidate.cells.some(c => claimed[this.cellKey(c.row, c.col)]);
+
+            if(conflict) { continue; }
+
+            for(const c of candidate.cells)
+            {
+                claimed[this.cellKey(c.row, c.col)] = true;
+            }
+
+            for(const edge of candidate.edges)
+            {
+                this.state.mergedPairs.push(edge);
+            }
+
+            // remove merged walls from edge list so doors aren't placed in middle of compound rooms
+            const internalKeys = {};
+            for(const edge of candidate.edges)
+            {
+                internalKeys[this.pairKey(edge.a, edge.b)] = true;
+            }
+
+            this.state.treeEdges = this.state.treeEdges.filter(
+                e => !internalKeys[this.pairKey(e.a, e.b)]
+            );
+
+            placed++;
+        }
     }
 
 

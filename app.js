@@ -11,6 +11,7 @@ class AppViewModel
         this.extraDoors = ko.observable(8);
         this.mergeChance = ko.observable(42);
         this.fillDensity = ko.observable(55);
+        this.compoundRooms = ko.observable(5);
         this.tileSize = ko.observable(4);
         this.renderMode = ko.observable("preview");
 
@@ -71,6 +72,7 @@ class AppViewModel
         const extraDoors = this.getNumber(this.extraDoors(), 0, 100);
         const mergeChance = this.getNumber(this.mergeChance(), 0, 100);
         const fillDensity = this.getNumber(this.fillDensity(), 10, 100);
+        const compoundRooms = this.getNumber(this.compoundRooms(), 0, 100);
         const tileSize = this.getNumber(this.tileSize(), 1, 16);
 
         this.minCellSize(minCS);
@@ -79,6 +81,7 @@ class AppViewModel
         this.extraDoors(extraDoors);
         this.mergeChance(mergeChance);
         this.fillDensity(fillDensity);
+        this.compoundRooms(compoundRooms);
         this.tileSize(tileSize);
 
         const startTime = performance.now();
@@ -92,7 +95,8 @@ class AppViewModel
                 roomCount: roomCount,
                 extraDoors: extraDoors,
                 mergeChance: mergeChance / 100,
-                fillDensity: fillDensity / 100
+                fillDensity: fillDensity / 100,
+                compoundRooms: compoundRooms
             });
 
             const result = gen.generate();
