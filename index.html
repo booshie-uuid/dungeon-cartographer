@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="UTF-8">
+    <title>Dungeon Cartographer</title>
+
+    <meta name="description" content="A 2D tile based map generator that uses a tartan-style meta grid to ensure purpose and structure across an otherwise chaotic labyrinth of rooms.">
+    
+    <link rel="stylesheet" href="style.css">
+
+    <script src="libs/knockout-3.5.1.js"></script>
+    
+    <script src="dungeonMapGenerator.js"></script>
+    <script src="dungeonMapRenderer.js"></script>
+    <script src="mapExplorer.js"></script>
+    <script src="app.js"></script>
+
+</head>
+<body>
+
+    <header>
+        <h1>Dungeon Cartographer</h1>
+    </header>
+
+    <div class="error-bar" data-bind="text: errorMsg, css: { visible: errorMsg() !== '' }"></div>
+
+    <aside class="sidebar">
+
+        <div class="sidebar-section">
+            <div class="section-title">Grid Config</div>
+            <div class="field">
+                <label>Min Cell Size</label>
+                <input type="number" data-bind="value: minCellSize">
+            </div>
+            <div class="field">
+                <label>Max Cell Size</label>
+                <input type="number" data-bind="value: maxCellSize">
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title">Generator Config</div>
+            <div class="field">
+                <label>Target Rooms</label>
+                <input type="number" data-bind="value: roomCount">
+            </div>
+            <div class="field">
+                <label>Extra Doors</label>
+                <input type="number" data-bind="value: extraDoors">
+            </div>
+            <div class="field">
+                <label>Merge Chance (%)</label>
+                <input type="number" data-bind="value: mergeChance">
+            </div>
+            <div class="field">
+                <label>Fill Density (%)</label>
+                <input type="number" data-bind="value: fillDensity">
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title">Display</div>
+            <div class="mode-toggle">
+                <button data-bind="click: setPreviewMode, css: { active: renderMode() === 'preview' }">Preview</button> 
+                <button data-bind="click: setTiledMode, css: { active: renderMode() === 'tiled' }">Tiled</button>
+            </div>
+            <div class="field" data-bind="visible: renderMode() === 'preview'">
+                <label>Tile Size (px)</label>
+                <input type="number" data-bind="value: tileSize">
+            </div>
+        </div>
+
+        <button class="btn-generate" data-bind="click: generate">Generate</button>
+
+        <div class="sidebar-section">
+            <div class="section-title">Statistics</div>
+            <div class="stat-row">
+                <span class="stat-label">Map Size (tiles)</span>
+                <span class="stat-value" data-bind="text: mapSize"></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Rooms</span>
+                <span class="stat-value" data-bind="text: cellCount"></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Gen Time</span>
+                <span class="stat-value" data-bind="text: genTime"></span>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-title">Legend</div>
+            <div class="legend-item"><div class="swatch" style="background:#0a0908;"></div> Void</div>
+            <div class="legend-item"><div class="swatch" style="background:#3d3529;"></div> Wall</div>
+            <div class="legend-item"><div class="swatch" style="background:#b89b6a;"></div> Floor</div>
+            <div class="legend-item"><div class="swatch" style="background:#c45030;"></div> Door</div>
+        </div>
+
+    </aside>
+
+    <div id="viewport" class="viewport">
+        <canvas id="canvas"></canvas>
+    </div>
+
+</body>
+</html>
