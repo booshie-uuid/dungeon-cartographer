@@ -498,7 +498,8 @@ class DungeonMapGenerator
             ? [DIRS.UP, DIRS.DOWN]
             : [DIRS.LEFT, DIRS.RIGHT];
 
-        // find off-axis neighbours from either cell in the seed pair
+        // find a room that is off-axis from original merge
+        // creates a bend in the compound rooms (L-shape, S-shape, etc.)
         const options = [];
 
         for(const anchor of [seed.a, seed.b])
@@ -529,7 +530,6 @@ class DungeonMapGenerator
         let lastCell = pick.neighbour;
         let cameFrom = { dr: -pick.dr, dc: -pick.dc };
 
-        // continue growing with fading probability
         let p = this.continueChance;
 
         while(Math.random() < p)
@@ -548,6 +548,38 @@ class DungeonMapGenerator
 
             cameFrom = { dr: lastCell.row - nextPick.row, dc: lastCell.col - nextPick.col };
             lastCell = nextPick;
+        }
+
+        // allow growth along original merge axis after initial branch
+        // adds some extra variety (T-shapes for example)
+        const axisDirs = seed.side === SIDES.RIGHT
+                       ? [DIRS.LEFT, DIRS.RIGHT]
+                       : [DIRS.UP, DIRS.DOWN];
+
+        const axisOptions = [];
+
+        for(const anchor of [seed.a, seed.b])
+        {
+            for(const [dr, dc] of axisDirs)
+            {
+                const r = anchor.row + dr;
+                const c = anchor.col + dc;
+
+                if(r < 0 || r >= this.state.metaGrid.numRows) { continue; }
+                if(c < 0 || c >= this.state.metaGrid.numCols) { continue; }
+                if(!this.isOccupied(r, c)) { continue; }
+                if(claimed[this.cellKey(r, c)] || localClaimed[this.cellKey(r, c)]) { continue; }
+
+                axisOptions.push({ anchor: anchor, neighbour: { row: r, col: c } });
+            }
+        }
+
+        if(axisOptions.length > 0 && Math.random() < 0.5)
+        {
+            const axisPick = axisOptions[Math.floor(Math.random() * axisOptions.length)];
+
+            edges.push(this.makeEdge(axisPick.anchor.row, axisPick.anchor.col, axisPick.neighbour.row, axisPick.neighbour.col));
+            cells.push(axisPick.neighbour);
         }
 
         return { cells, edges };
@@ -581,13 +613,12 @@ class DungeonMapGenerator
                 claimed[this.cellKey(cell.row, cell.col)] = true;
             }
 
-            // open walls along the growth path
             for(const edge of result.edges)
             {
                 this.state.mergedPairs.push(edge);
             }
 
-            // find all internal adjacencies to prevent doors inside the compound room
+            // remove merged walls and internal walls from edge list to avoid weird internal doors
             const allCells = [seed.a, seed.b, ...result.cells];
             const cellSet = {};
             for(const cell of allCells)
