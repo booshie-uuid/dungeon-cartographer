@@ -581,16 +581,34 @@ class DungeonMapGenerator
                 claimed[this.cellKey(cell.row, cell.col)] = true;
             }
 
+            // open walls along the growth path
             for(const edge of result.edges)
             {
                 this.state.mergedPairs.push(edge);
             }
 
-            // remove merged walls from edges list to avoid floating doors
-            const internalKeys = {};
-            for(const edge of result.edges)
+            // find all internal adjacencies to prevent doors inside the compound room
+            const allCells = [seed.a, seed.b, ...result.cells];
+            const cellSet = {};
+            for(const cell of allCells)
             {
-                internalKeys[this.pairKey(edge.a, edge.b)] = true;
+                cellSet[this.cellKey(cell.row, cell.col)] = true;
+            }
+
+            const internalKeys = {};
+
+            for(const cell of allCells)
+            {
+                for(const [dr, dc] of Object.values(DIRS))
+                {
+                    const nr = cell.row + dr;
+                    const nc = cell.col + dc;
+
+                    if(!cellSet[this.cellKey(nr, nc)]) { continue; }
+
+                    const edge = this.makeEdge(cell.row, cell.col, nr, nc);
+                    internalKeys[this.pairKey(edge.a, edge.b)] = true;
+                }
             }
 
             this.state.treeEdges = this.state.treeEdges.filter(

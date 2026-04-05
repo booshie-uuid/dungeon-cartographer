@@ -63,6 +63,25 @@ class AppViewModel
         }
     }
 
+    testReachability()
+    {
+        if(!this.renderer.mapData)
+        {
+            this.errorMsg("generate a map first dingus...");
+
+            return;
+        }
+
+        this.errorMsg("");
+
+        const tileSize = this.getNumber(this.tileSize(), 1, 16);
+
+        this.renderer.drawReachability(this.renderer.mapData, tileSize, (allReachable) =>
+        {
+            this.errorMsg(allReachable ? "" : "can't reach all of the rooms");
+        });
+    }
+
     generate()
     {
         this.errorMsg("");

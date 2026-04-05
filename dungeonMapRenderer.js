@@ -100,6 +100,117 @@ class DungeonMapRenderer
         this.centerCanvas(true);
     }
 
+    drawReachability(mapData, tileSize, onComplete)
+    {
+        if(this.reachabilityTimer) { cancelAnimationFrame(this.reachabilityTimer); }
+        
+        this.drawPreview(mapData, tileSize);
+
+        const grid = mapData.grid;
+        const w = mapData.width;
+        const h = mapData.height;
+        const passable = new Uint8Array(w * h);
+        const reached = new Uint8Array(w * h);
+
+        const passableList = [];
+        let startIdx = -1;
+
+        for(let r = 0; r < h; r++)
+        {
+            for(let c = 0; c < w; c++)
+            {
+                const t = grid[r][c].type;
+
+                if(t === TILES.FLOOR || t === TILES.DOOR)
+                {
+                    const idx = r * w + c;
+
+                    passable[idx] = 1;
+                    passableList.push(idx);
+
+                    startIdx = idx;
+                }
+            }
+        }
+
+        if(startIdx === -1)
+        {
+            if(onComplete) { onComplete(true); }
+            return;
+        }
+
+        const queue = [startIdx];
+
+        reached[startIdx] = 1;
+        
+        let head = 0;
+
+        const ctx = this.ctx;
+        const tilesPerFrame = Math.max(20, Math.ceil(passableList.length / 120));
+
+        const step = () =>
+        {
+            let drawn = 0;
+
+            ctx.fillStyle = "#4a8c5c";
+
+            while(head < queue.length && drawn < tilesPerFrame)
+            {
+                const idx = queue[head++];
+                const r = (idx / w) | 0;
+                const c = idx % w;
+
+                ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                drawn++;
+
+                const neighbours = [
+                    r > 0 ? idx - w : -1,
+                    r < h - 1 ? idx + w : -1,
+                    c > 0 ? idx - 1 : -1,
+                    c < w - 1 ? idx + 1 : -1
+                ];
+
+                for(const n of neighbours)
+                {
+                    if(n >= 0 && passable[n] && !reached[n])
+                    {
+                        reached[n] = 1;
+                        queue.push(n);
+                    }
+                }
+            }
+
+            if(head < queue.length)
+            {
+                this.reachabilityTimer = requestAnimationFrame(step);
+                return;
+            }
+
+            let allReachable = true;
+
+            ctx.fillStyle = "#c45050";
+
+            for(const idx of passableList)
+            {
+                if(!reached[idx])
+                {
+                    const r = (idx / w) | 0;
+                    const c = idx % w;
+
+                    ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                    
+                    allReachable = false;
+                }
+            }
+
+            this.reachabilityTimer = null;
+
+            if(onComplete) { onComplete(allReachable); }
+        };
+
+        this.reachabilityTimer = requestAnimationFrame(step);
+    }
+
     drawGridLines(cols, rows, tileSize)
     {
         const ctx = this.ctx;

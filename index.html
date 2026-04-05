@@ -80,6 +80,7 @@
         </div>
 
         <button class="btn-generate" data-bind="click: generate">Generate</button>
+        <button class="btn-generate" data-bind="click: testReachability, visible: renderMode() === 'preview'">Test Map</button>
 
         <div class="sidebar-section">
             <div class="section-title">Statistics</div>
@@ -103,6 +104,8 @@
             <div class="legend-item"><div class="swatch" style="background:#3d3529;"></div> Wall</div>
             <div class="legend-item"><div class="swatch" style="background:#b89b6a;"></div> Floor</div>
             <div class="legend-item"><div class="swatch" style="background:#c45030;"></div> Door</div>
+            <div class="legend-item"><div class="swatch" style="background:#4a8c5c;"></div> Reachable</div>
+            <div class="legend-item"><div class="swatch" style="background:#c45050;"></div> Unreachable</div>
         </div>
 
     </aside>
