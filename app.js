@@ -9,8 +9,9 @@ class AppViewModel
         this.maxCellSize = ko.observable(15);
         this.roomCount = ko.observable(140);
         this.extraDoors = ko.observable(8);
-        this.mergeChance = ko.observable(42);
-        this.fillDensity = ko.observable(55);
+        this.deadendChance = ko.observable(50);
+        this.mergeChance = ko.observable(40);
+        this.fillDensity = ko.observable(40);
         this.compoundRooms = ko.observable(5);
         this.continueChance = ko.observable(35);
         this.tileSize = ko.observable(4);
@@ -90,6 +91,7 @@ class AppViewModel
         const maxCS = this.getNumber(this.maxCellSize(), minCS, 32);
         const roomCount = this.getNumber(this.roomCount(), 1, 500);
         const extraDoors = this.getNumber(this.extraDoors(), 0, 100);
+        const deadendChance = this.getNumber(this.deadendChance(), 0, 100);
         const mergeChance = this.getNumber(this.mergeChance(), 0, 100);
         const fillDensity = this.getNumber(this.fillDensity(), 10, 100);
         const compoundRooms = this.getNumber(this.compoundRooms(), 0, 100);
@@ -100,6 +102,7 @@ class AppViewModel
         this.maxCellSize(maxCS);
         this.roomCount(roomCount);
         this.extraDoors(extraDoors);
+        this.deadendChance(deadendChance);
         this.mergeChance(mergeChance);
         this.fillDensity(fillDensity);
         this.compoundRooms(compoundRooms);
@@ -116,6 +119,7 @@ class AppViewModel
                 maxCellSize: maxCS,
                 roomCount: roomCount,
                 extraDoors: extraDoors,
+                deadendChance: deadendChance / 100,
                 mergeChance: mergeChance / 100,
                 fillDensity: fillDensity / 100,
                 compoundRooms: compoundRooms,

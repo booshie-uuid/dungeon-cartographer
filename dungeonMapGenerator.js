@@ -27,8 +27,9 @@ class DungeonMapGenerator
         maxCellSize = 15,
         roomCount = 140,
         extraDoors = 8,
-        mergeChance = 0.42,
-        fillDensity = 0.55,
+        deadendChance = 0.5,
+        mergeChance = 0.40,
+        fillDensity = 0.40,
         compoundRooms = 5,
         continueChance = 0.35
     } = {})
@@ -39,6 +40,7 @@ class DungeonMapGenerator
         this.maxCellSize = maxCellSize;
         this.roomCount = roomCount;
         this.extraDoors = extraDoors;
+        this.deadendChance = deadendChance;
         this.mergeChance = mergeChance;
         this.fillDensity = fillDensity;
         this.compoundRooms = compoundRooms;
@@ -54,11 +56,13 @@ class DungeonMapGenerator
             rooms: [],
             treeEdges: [],
             mergedPairs: [],
+            protectedDeadends: {},
             metaGrid: metaGrid
         };
 
         this.placeRooms();
         this.fixDiagonalVoids();
+        this.protectDeadends();
         this.placeCompoundRooms();
 
         const width = metaGrid.totalW;
@@ -468,6 +472,45 @@ class DungeonMapGenerator
     }
 
 
+    /* DEADENDS *********************************************************************/
+
+    protectDeadends()
+    {
+        if(this.deadendChance <= 0) { return; }
+
+        // indentify deadends by counting edges for each room
+        const treeDegree = {};
+        for(const edge of this.state.treeEdges)
+        {
+            const keyA = this.cellKey(edge.a.row, edge.a.col);
+            const keyB = this.cellKey(edge.b.row, edge.b.col);
+
+            treeDegree[keyA] = (treeDegree[keyA] || 0) + 1;
+            treeDegree[keyB] = (treeDegree[keyB] || 0) + 1;
+        }
+
+        // only protect deadends that aren't already merged
+        const mergedRooms = {};
+        for(const m of this.state.mergedPairs)
+        {
+            mergedRooms[this.cellKey(m.a.row, m.a.col)] = true;
+            mergedRooms[this.cellKey(m.b.row, m.b.col)] = true;
+        }
+
+        for(const room of this.state.rooms)
+        {
+            const key = this.cellKey(room.row, room.col);
+
+            if(treeDegree[key] !== 1) { continue; }
+            if(mergedRooms[key]) { continue; }
+
+            if(Math.random() >= this.deadendChance) { continue; }
+
+            this.state.protectedDeadends[key] = true;
+        }
+    }
+
+
     /* COMPOUND ROOMS ***************************************************************/
 
     findGrowthNeighbours(cell, cameFrom, claimed, localClaimed)
@@ -595,6 +638,11 @@ class DungeonMapGenerator
         {
             claimed[this.cellKey(m.a.row, m.a.col)] = true;
             claimed[this.cellKey(m.b.row, m.b.col)] = true;
+        }
+
+        for(const key of Object.keys(this.state.protectedDeadends))
+        {
+            claimed[key] = true;
         }
 
         const seeds = this.shuffle(this.state.mergedPairs.slice());
@@ -778,15 +826,20 @@ class DungeonMapGenerator
         const roomLookup = {};
         for(const room of this.state.rooms) { roomLookup[this.cellKey(room.row, room.col)] = room; }
 
+        const deadends = this.state.protectedDeadends;
         const candidates = [];
 
         for(const room of this.state.rooms)
         {
+            const roomKey = this.cellKey(room.row, room.col);
+
             const rightNeighbour = roomLookup[this.cellKey(room.row, room.col + 1)];
             if(rightNeighbour)
             {
                 const pk = this.pairKey(room, rightNeighbour);
-                if(!placed[pk] && !mergedSet[pk])
+
+                if(!placed[pk] && !mergedSet[pk] && !deadends[roomKey]
+                   && !deadends[this.cellKey(rightNeighbour.row, rightNeighbour.col)])
                 {
                     candidates.push({ a: room, b: rightNeighbour, side: SIDES.RIGHT, pairKey: pk });
                 }
@@ -796,7 +849,9 @@ class DungeonMapGenerator
             if(bottomNeighbour)
             {
                 const pk = this.pairKey(room, bottomNeighbour);
-                if(!placed[pk] && !mergedSet[pk])
+
+                if(!placed[pk] && !mergedSet[pk] && !deadends[roomKey]
+                   && !deadends[this.cellKey(bottomNeighbour.row, bottomNeighbour.col)])
                 {
                     candidates.push({ a: room, b: bottomNeighbour, side: SIDES.BOTTOM, pairKey: pk });
                 }
