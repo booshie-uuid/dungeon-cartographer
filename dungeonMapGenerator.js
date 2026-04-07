@@ -244,7 +244,7 @@ class DungeonMapGenerator
     placeRoom(row, col)
     {
         this.state.occupied[this.cellIndex(row, col)] = 1;
-        this.state.rooms.push({ row, col });
+        this.state.rooms.push({ row: row, col: col, compoundRoomId: null });
     }
 
     isOccupied(row, col)
@@ -634,6 +634,12 @@ class DungeonMapGenerator
     {
         if(this.compoundRooms <= 0) { return; }
 
+        const roomLookup = {};
+        for(const room of this.state.rooms)
+        {
+            roomLookup[this.cellKey(room.row, room.col)] = room;
+        }
+
         const claimed = {};
 
         for(const m of this.state.mergedPairs)
@@ -649,6 +655,7 @@ class DungeonMapGenerator
 
         const seeds = this.shuffle(this.state.mergedPairs.slice());
         let placed = 0;
+        let nextCompoundId = 1;
 
         for(const seed of seeds)
         {
@@ -695,6 +702,14 @@ class DungeonMapGenerator
             this.state.treeEdges = this.state.treeEdges.filter(
                 e => !internalKeys[this.pairKey(e.a, e.b)]
             );
+
+            const compoundId = nextCompoundId++;
+            for(const cell of allCells)
+            {
+                const room = roomLookup[this.cellKey(cell.row, cell.col)];
+                
+                if(room) { room.compoundRoomId = compoundId; }
+            }
 
             placed++;
         }
@@ -841,7 +856,8 @@ class DungeonMapGenerator
                 const pk = this.pairKey(room, rightNeighbour);
 
                 if(!placed[pk] && !mergedSet[pk] && !deadends[roomKey]
-                   && !deadends[this.cellKey(rightNeighbour.row, rightNeighbour.col)])
+                   && !deadends[this.cellKey(rightNeighbour.row, rightNeighbour.col)]
+                   && !(room.compoundRoomId !== null && room.compoundRoomId === rightNeighbour.compoundRoomId))
                 {
                     candidates.push({ a: room, b: rightNeighbour, side: SIDES.RIGHT, pairKey: pk });
                 }
@@ -853,7 +869,8 @@ class DungeonMapGenerator
                 const pk = this.pairKey(room, bottomNeighbour);
 
                 if(!placed[pk] && !mergedSet[pk] && !deadends[roomKey]
-                   && !deadends[this.cellKey(bottomNeighbour.row, bottomNeighbour.col)])
+                   && !deadends[this.cellKey(bottomNeighbour.row, bottomNeighbour.col)]
+                   && !(room.compoundRoomId !== null && room.compoundRoomId === bottomNeighbour.compoundRoomId))
                 {
                     candidates.push({ a: room, b: bottomNeighbour, side: SIDES.BOTTOM, pairKey: pk });
                 }
