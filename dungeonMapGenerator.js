@@ -81,7 +81,9 @@ class DungeonMapGenerator
         this.placeTiles(grid);
         this.placeDoors(grid);
 
-        const result = { grid, width, height, totalCells: this.state.rooms.length };
+        const verified = this.testReachability(grid, width, height);
+
+        const result = { grid, width, height, totalCells: this.state.rooms.length, verified: verified };
 
         this.state = null;
         
@@ -900,6 +902,72 @@ class DungeonMapGenerator
                      : 0;
 
         return Math.max(min, Math.min(max, centre + offset));
+    }
+
+
+    /* TESTS ************************************************************************/
+
+    testReachability(grid, width, height)
+    {
+        const passable = new Uint8Array(width * height);
+
+        let passableCount = 0;
+        let startIdx = -1;
+
+        for(let r = 0; r < height; r++)
+        {
+            for(let c = 0; c < width; c++)
+            {
+                const t = grid[r][c].type;
+
+                if(t === TILES.FLOOR || t === TILES.DOOR)
+                {
+                    const idx = r * width + c;
+
+                    passable[idx] = 1;
+                    passableCount++;
+                    startIdx = idx;
+                }
+            }
+        }
+
+        if(startIdx === -1) { return true; }
+
+        const reached = new Uint8Array(width * height);
+        const queue = [startIdx];
+
+        reached[startIdx] = 1;
+
+        let reachedCount = 0;
+        let head = 0;
+
+        while(head < queue.length)
+        {
+            const idx = queue[head++];
+            
+            reachedCount++;
+
+            const r = (idx / width) | 0;
+            const c = idx % width;
+
+            const neighbours = [
+                r > 0 ? idx - width : -1,
+                r < height - 1 ? idx + width : -1,
+                c > 0 ? idx - 1 : -1,
+                c < width - 1 ? idx + 1 : -1
+            ];
+
+            for(const n of neighbours)
+            {
+                if(n >= 0 && passable[n] && !reached[n])
+                {
+                    reached[n] = 1;
+                    queue.push(n);
+                }
+            }
+        }
+
+        return reachedCount === passableCount;
     }
 
 

@@ -195,6 +195,7 @@ input[type="number"]:focus
 
 .stat-row .stat-label { color: #504838; }
 .stat-row .stat-value { color: #d4a030; }
+.stat-row .stat-fail { color: #c45050; }
 
 
 /* TILE LEGEND *****************************************************************/

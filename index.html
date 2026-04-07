@@ -100,6 +100,10 @@
                 <span class="stat-label">Gen Time</span>
                 <span class="stat-value" data-bind="text: genTime"></span>
             </div>
+            <div class="stat-row">
+                <span class="stat-label">Verification</span>
+                <span class="stat-value" data-bind="text: verified, css: { 'stat-fail': verified() === 'fail' }"></span>
+            </div>
         </div>
 
         <div class="sidebar-section">

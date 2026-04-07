@@ -20,6 +20,7 @@ class AppViewModel
         this.mapSize = ko.observable("--");
         this.cellCount = ko.observable("--");
         this.genTime = ko.observable("--");
+        this.verified = ko.observable("--");
         this.errorMsg = ko.observable("");
     }
 
@@ -80,6 +81,7 @@ class AppViewModel
         this.renderer.drawReachability(this.renderer.mapData, tileSize, (allReachable) =>
         {
             this.errorMsg(allReachable ? "" : "can't reach all of the rooms");
+            this.verified(allReachable ? "pass" : "fail");
         });
     }
 
@@ -132,6 +134,12 @@ class AppViewModel
             this.mapSize(result.width + " x " + result.height);
             this.cellCount(result.totalCells);
             this.genTime(elapsed + " ms");
+            this.verified(result.verified ? "pass" : "fail");
+
+            if(!result.verified)
+            {
+                this.errorMsg("some tiles are unreachable...");
+            }
 
             this.renderMap(result, tileSize);
         }
@@ -141,6 +149,7 @@ class AppViewModel
             this.mapSize("--");
             this.cellCount("--");
             this.genTime("--");
+            this.verified("--");
         }
     }
 
